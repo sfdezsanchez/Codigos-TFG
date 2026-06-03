@@ -1,0 +1,8 @@
+def grados2HorasMinSeg(alfa0):
+    alfa0_tiempo=alfa0/15 
+    alfa0_hora=math.trunc(alfa0_tiempo)
+    alfa0_minutos_decimales=(alfa0_tiempo-alfa0_hora)*60
+    alfa0_minutos=math.trunc(alfa0_minutos_decimales)
+    alfa0_segundos=(alfa0_minutos_decimales-alfa0_minutos)*60
+    alfa0_t=np.array([alfa0_hora, alfa0_minutos, alfa0_segundos]) #unidades: horas, minutos, segundos
+    return (alfa0_t)
