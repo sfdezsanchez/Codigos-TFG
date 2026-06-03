@@ -1,0 +1,79 @@
+import pandas as pd
+import numpy as np
+
+#ejemplo para Gaia:
+tiempo=-16.0 #años
+factor=(1e-3)/3600 #factor de conversion de milisegundos de 
+#arco/year a grados/year) 
+
+first_chunk=True  #para escribir el encabezado solo una vez
+for df in pd.read_csv('gaia.csv', chunksize=200000):    
+    df2 = df.dropna(axis=0, subset=['pmra','pmdec', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag']).copy() #esto para eliminar las filas determinadas con datos vacios 
+
+    if tiempo <0:
+        df2['pmdec']=-df2['pmdec'].astype(float)
+        df2['pmra']=-df2['pmra'].astype(float)
+    else:
+        df2['pmdec']=df2['pmdec'].astype(float)
+        df2['pmra']=df2['pmra'].astype(float)
+
+    #pasamos los amgulos a radianes para que sea mas facil hacer algunas operaciones:
+    ra_rad=np.radians(df2['ra'])
+    dec_rad=np.radians(df2['dec'])
+    #unidades: radianes/año
+    
+    pmdec_rad_ano=np.radians(df2['pmdec']*factor) #unidades: radianes/año
+    pmra_cos_dec_rad_ano=np.radians(df2['pmra']*factor)
+
+    #calculamos la distancia "a" que se desplaza cada estrella (triangulo esferico):
+    #OJO pmdec y pmra estan en milisegundos de arco por year, pasamos a grados por year y han pasado 16 años   
+    a_grados=np.sqrt((df2['pmdec']*factor)**2
+    +(df2['pmra']*factor)**2)*abs(tiempo)  #unidades: grados
+    a_rad=np.radians(a_grados)
+
+    #otro lado del triangulo esferico: c=90-dec (grados)
+    c_rad=np.pi/2-dec_rad
+    c_grados=np.rad2deg(c_rad)
+
+    #calculamos el angulo B (triangulo esferico)
+    #unidades:radianes
+    B=np.arctan2(pmra_cos_dec_rad_ano,(pmdec_rad_ano)) 
+    #esto ya calcula el angulo mitad
+    B_rad=B % (2*np.pi) #normalizamos a 2pi
+    #CASO ESPECIAL: si solo varia la declinacion pero no la ascension recta, los valores con B=180 cambian a B=0 en este codigo y eso es un error, para corregir eso hacemos:
+    correccion=(df2['pmra'] == 0) & (df2['pmdec'] < 0)
+    B_rad[correccion]=np.pi 
+
+    #calculamos el lado b del triangulo esferico: b= 90-dec2000
+    #Para ello utilizamos el teorema del coseno:  
+    cos_b=np.cos(a_rad)*np.cos(c_rad)+np.sin(a_rad)*np.sin(c_rad)*np.cos(B_rad) 
+    cos_b=np.clip(cos_b,-1,1) #para acotar entre -1 y 1
+    b_rad=np.arccos(cos_b) #unidades: radianes
+    b_grados=np.rad2deg(b_rad) #unidades: grados
+
+    #a partir de b ya podemos calcular dec2000:
+    dec_2000_grados=90-b_grados
+
+    #para calcular el angulo A hay que usar un sistema de ecuaciones con el teorema del seno y el teorema del coseno:
+    sen_A=np.sin(a_rad)*np.sin(B_rad)/np.sin(b_rad)
+    cos_A=(np.cos(a_rad)-np.cos(c_rad)*np.cos(b_rad))/(np.sin(c_rad)*np.sin(b_rad))
+    A_rad_sin_corregir=2*np.arctan2(sen_A, (cos_A+1)) 
+    #esto estara sin corregir porque debe ser [0,2pi) pero aqui tendremos negativos
+    A_sin_corregir_grados=np.rad2deg(A_rad_sin_corregir)
+    A_grados=A_sin_corregir_grados % 360 #para corregirlo usamos la funcion modulo
+
+    #con esto ya podemos calcular ra2000:
+    ra_2000_grados=(A_grados+df2['ra']) %360
+
+    df2['ra_2000 (grados)']=ra_2000_grados
+    df2['dec_2000 (grados)']=dec_2000_grados
+
+    #Calculamos la magnitud V:
+    color=df2['phot_bp_mean_mag']-df2['phot_rp_mean_mag']
+    V_T=(df2['phot_g_mean_mag']+0.01077+0.0682*color +0.2387*color**2-0.02342*color**3)
+    df2['Vmag']=V_T
+
+    df2.to_csv('gaia_J2000.csv', mode='w' if first_chunk 
+    else 'a',header=first_chunk, index=False)
+
+    first_chunk = False
