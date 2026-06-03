@@ -1,0 +1,25 @@
+def meridianos_grados(alfa_inicial_tiempo, alfa_final_tiempo, meridianos):
+    #para alfa se hara igual que el caso anterior radio<2
+    #VALORES DE ALFA
+    alfa_h_inicial=alfa_inicial_tiempo[0] #hora
+    alfa_m_inicial=alfa_inicial_tiempo[1] #minutos
+    if alfa_m_inicial<(meridianos):
+        alfa_m_lineas_inicial=0
+    else:
+        alfa_m_lineas_inicial=alfa_m_inicial-alfa_m_inicial %(meridianos)
+    #pasamos a grados:
+    alfa_lineas_inicial=sa.HorasMinSeg2grados(alfa_h_inicial, alfa_m_lineas_inicial, 0)
+
+    alfa_h_final=alfa_final_tiempo[0]
+    alfa_m_final=alfa_final_tiempo[1]
+    if alfa_m_final<(meridianos):
+        alfa_m_lineas_final=(meridianos)
+    else:
+        alfa_m_lineas_final=alfa_m_final-alfa_m_final%(meridianos) +(meridianos)
+    #pasamos a grados
+    alfa_lineas_final=sa.HorasMinSeg2grados(alfa_h_final, alfa_m_lineas_final, 0)
+
+    #pasamos los minutos a horas y luego a grados (espaciado)
+    espaciado2=meridianos/60 *15
+    valores_alfa=sa.vector_circular_grados1(alfa_lineas_inicial,alfa_lineas_final, espaciado2)
+    return(valores_alfa)
