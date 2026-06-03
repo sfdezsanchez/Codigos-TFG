@@ -1,0 +1,24 @@
+def intervalo_circular_inicial(grados, periodo=360.0):
+    h=np.asarray(grados) % periodo  #normalizamos
+    h_sorted=np.sort(h) #ordenamos de menor a mayor    
+    #cerramos el circulo;
+    h_ext=np.concatenate([h_sorted, [h_sorted[0] + periodo]])    
+    #calculamos las diferencias entre valores consecutivos
+    diffs=np.diff(h_ext)    
+    #la mayor diferencia entre valores consecutivos:
+    i=np.argmax(diffs)    
+    #intervalo complementario:
+    inicio=h_ext[i+1] % periodo
+    return inicio
+
+def intervalo_circular_final(grados, periodo=360.0):
+    h=np.asarray(grados) % periodo  #normalizamos   
+    h_sorted=np.sort(h)
+    h_ext=np.concatenate([h_sorted, [h_sorted[0] + periodo]])
+    diffs=np.diff(h_ext)
+    i=np.argmax(diffs)
+    inicio=h_ext[i+1] % periodo
+    #igual que la funcion anterior pero calculamos el 
+    #valor final del vertor:
+    fin=h_ext[i]
+    return fin
