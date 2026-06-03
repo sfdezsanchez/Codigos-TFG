@@ -1,0 +1,21 @@
+def vector_circular_grados1(inicio, fin, espaciado,periodo=360.0):
+    if inicio <= fin:
+        #usamos un pequeno margen (espaciado/10) para asegurar que incluya el final pero sin pasarse mucho
+        return np.arange(inicio, fin + (espaciado/10), espaciado)
+    else:
+        #tramo1: desde el inicio hasta antes del valor igual al periodo 
+        tramo1=np.arange(inicio, periodo, espaciado)
+        
+        #calculamos donde deberia empezar el tramo2 para mantener el espaciado
+        #El ultimo punto de tramo1 fue tramo1[-1].
+        #La distancia que falto para llegar al periodo fue (periodo - tramo1[-1]).
+        #Por tanto, el primer punto despues del 0 debe ser (espaciado - distancia_restante)
+        distancia_restante=periodo-tramo1[-1]
+        inicio_tramo2=espaciado-distancia_restante
+        
+        #si el inicio_tramo2 es casi 0, lo forzamos a 0:
+        if inicio_tramo2 >= espaciado: 
+            inicio_tramo2=0
+            
+        tramo2=np.arange(inicio_tramo2, fin+(espaciado/10), espaciado)
+        return np.concatenate([tramo1, tramo2])
