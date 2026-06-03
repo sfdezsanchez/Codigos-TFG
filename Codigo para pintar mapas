@@ -1,0 +1,235 @@
+import pandas as pd
+import numpy as np
+import math
+import separacion_ang as sa
+import matplotlib.pyplot as plt
+#------------DATOS DE PARTIDA------------
+#ejempo para Casiopea:
+alfa0_h=1
+alfa0_m=0
+alfa0_s=0
+
+delta0_g=60
+delta0_m=0
+delta0_s=0
+
+#tipo de mapa: "enano" (paralelos en minutos de arco) o "grande" (paralelos en grados)
+tipo='grande'
+
+#radio estrellas mas brillantes:
+R=4
+
+#separacion entre paralelos y meridianos:
+#RECOMENDACION: 15' en paralelos por 1min en meridianos
+paralelos=2 #unidad: minutos de arco si es mapa enano, 
+#grados si es mapa grande
+meridianos=8 #unidad: minutos
+
+df=pd.read_csv('catalogo_reducido_casiopea.csv',low_memory=False) #catalogo que vamos a representar
+#------------------------------------------------
+#pasamos las coordenadas a grados:
+alfa0=sa.HorasMinSeg2grados(alfa0_h, alfa0_m, alfa0_s)
+delta0=sa.GradosMinSeg2grados(delta0_g,delta0_m,delta0_s)
+
+#ahora buscamos en el catalogo que vamos a representar los valores 
+#"maximos" y "minimos" para la ascension recta y la declinacion.
+#Para la declinacion es inmediato:
+delta_min=df['dec_2000 (grados)'].min() #unidades: grados
+delta_min_gms=sa.grados2GradosMinSeg(delta_min)
+
+delta_max=df['dec_2000 (grados)'].max() #unidades: grados
+delta_max_gms=sa.grados2GradosMinSeg(delta_max)
+
+#para la ascension recta hay que hacer otra cosa porque si pasa por el 0 no funciona lo de los maximos y minimos
+alfa_inicial=sa.intervalo_circular_inicial(df['ra_2000 (grados)']) #unidades: grados
+alfa_inicial_tiempo=sa.grados2HorasMinSeg(alfa_inicial) #vector
+
+alfa_final=sa.intervalo_circular_final(df['ra_2000 (grados)'])
+alfa_final_tiempo=sa.grados2HorasMinSeg(alfa_final)
+#-----------------------------------------------------
+#para pintar las lineas de meridianos y paralelos, queremos que la primera linea empiece para valores menores que alfa_min y delta_min y que la ultima linea acabe para valores mayores que alfa_max y delta_max
+
+#vamos a hacer mas o menos lineas segun el area que estamos representando:
+if tipo=='enano':
+    #VALORES DE DELTA:
+    #para ver el valor minimo:
+    delta_g_min=delta_min_gms[0] #grados
+    delta_m_min=delta_min_gms[1] #minutos
+    if delta_m_min < (paralelos): 
+    #ejemplo para paralelos=15'
+    #si alfa_m_min esta entre 0 y 15, el valor menor de alfa para las lineas sera 0
+        delta_m_lineas_min=0
+    else: 
+    #si alfa_m_min>15, el valor menor de alfa para las lineas sera el multiplo de 15 (0,15,30,45) que mas cerca este por debajo
+        delta_m_lineas_min=delta_m_min-delta_m_min%(paralelos)
+    #pasamos a grados
+    delta_lineas_min=sa.GradosMinSeg2grados(delta_g_min, delta_m_lineas_min, 0) #unidades:grados
+
+    #hacemos lo mismo para el valor maximo:
+    delta_g_max=delta_max_gms[0]
+    delta_m_max=delta_max_gms[1]
+    if delta_m_max<(paralelos): 
+    #si es menor que 15, el valor maximo sera 15
+        delta_m_lineas_max=(paralelos)
+    else: 
+    #si es mayor que 15, el valor maximo sera el siguiente 
+    #multiplo de 15
+        delta_m_lineas_max=delta_m_max-delta_m_max%(paralelos)+(paralelos)
+    #pasamos a grados
+    delta_lineas_max=sa.GradosMinSeg2grados(delta_g_max, delta_m_lineas_max, 0)
+
+    #pasamos 15' a grados (espaciado)
+    espaciado=paralelos/60
+    valores_delta=np.arange(delta_lineas_min, 
+    delta_lineas_max+espaciado, espaciado) #este es el vector
+    #con las coordenadas de delta de los puntos de corte
+
+    #VALORES DE ALFA
+    alfa_h_inicial=alfa_inicial_tiempo[0] #horas
+    alfa_m_inicial=alfa_inicial_tiempo[1] #minutos
+    if alfa_m_inicial<(meridianos):
+        alfa_m_lineas_inicial=0
+    else:
+        alfa_m_lineas_inicial=alfa_m_inicial-alfa_m_inicial %(meridianos) 
+    #pasamos a grados
+    alfa_lineas_inicial=sa.HorasMinSeg2grados(alfa_h_inicial, alfa_m_lineas_inicial, 0)
+    
+    alfa_h_final=alfa_final_tiempo[0] #horas
+    alfa_m_final=alfa_final_tiempo[1] #minutos
+    if alfa_m_final<(meridianos):
+        alfa_m_lineas_final=(meridianos)
+    else:
+        alfa_m_lineas_final=alfa_m_final-alfa_m_final%(meridianos)+(meridianos)
+    #pasamos a grados
+    alfa_lineas_final=sa.HorasMinSeg2grados(alfa_h_final, alfa_m_lineas_final, 0)
+
+    #pasamos los minutos a horas y luego a grados (espaciado)
+    espaciado2=meridianos/60 *15
+    valores_alfa=sa.vector_circular_grados1(alfa_lineas_inicial, alfa_lineas_final, espaciado2)
+
+elif tipo=='grande':
+
+    #utilizo las funciones para obtener los vectores con los puntos de corte entre paralelos y meridianos
+    valores_delta=sa.paralelos_grados(delta_min_gms, delta_max_gms, paralelos)
+    valores_alfa=sa.meridianos_grados(alfa_inicial_tiempo, alfa_final_tiempo, meridianos)
+
+else:
+    print('el tipo de mapa no esta incluido en las opciones')
+#------------------------------------------------------------
+#ya tenemos los puntos para hacer las distintas combinaciones (alfa, delta), para la representacion vamos a trabajar en grados proyectamos como el en codigo del ploteo de las estrellas
+
+plt.style.use('dark_background')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.axis('equal') #para que el plot sea un cuadrado
+
+#definimos un valor muy pequeno para evitar la division por cero al dibujar los paralelos y meridianos:
+epsilon = 1e-10
+
+#para los paralelos:
+#Fijamos delta. Voy a hacer un vector con el mismo numero de elementos que los valores de alfa, pero con un solo valor de delta
+for i in range(len(valores_delta)):
+    vector_delta=np.ones(len(valores_alfa))*valores_delta[i]
+    A=valores_alfa-alfa0
+    b=90-delta0
+    c=90-vector_delta   
+    cos_r=np.cos(np.deg2rad(b))*np.cos(np.deg2rad(c))+np.sin(np.deg2rad(b))*np.sin(np.deg2rad(c))*np.cos(np.deg2rad(A))
+    r_rad=np.arccos(cos_r) #radianes
+    
+    #calculamos el denominador una sola vez
+    denominador=np.sin(r_rad)
+
+    #creamos mascaras para evitar el error de dividir entre 0: 
+    #si el denominador es > epsilon, aplicamos las formulas del teorema del seno y del coseno. Si no, el valor sera 0: 
+    sen_beta=np.where(denominador > epsilon, (np.sin(np.deg2rad(c))*np.sin(np.deg2rad(A))) / denominador, 0)
+    cos_beta=np.where(denominador > epsilon, (np.cos(np.deg2rad(c))-np.cos(r_rad) * np.cos(np.deg2rad(b)))/(np.sin(np.deg2rad(b)) * denominador), 0)
+    r=np.rad2deg(r_rad) #grados
+
+    x=-r*sen_beta
+    y=r*cos_beta
+
+    plt.plot(x, y, color='lightcoral', zorder=1)
+
+#para los meridianos:
+#fijamos alfa y vemos las lineas para cada posible delta
+for i in range(len(valores_alfa)):
+    vector_alfa=np.ones(len(valores_delta))*valores_alfa[i]
+    A=vector_alfa-alfa0
+    b=90-delta0
+    c=90-valores_delta
+    cos_r=np.cos(np.deg2rad(b))*np.cos(np.deg2rad(c))+np.sin(np.deg2rad(b))*np.sin(np.deg2rad(c))*np.cos(np.deg2rad(A))
+    r_rad=np.arccos(cos_r) #radianes
+    denominador=np.sin(r_rad)
+    sen_beta=np.where(denominador > epsilon, (np.sin(np.deg2rad(c))*np.sin(np.deg2rad(A))) / denominador, 0)
+    cos_beta=np.where(denominador > epsilon, (np.cos(np.deg2rad(c))-np.cos(r_rad) * np.cos(np.deg2rad(b))) /(np.sin(np.deg2rad(b)) * denominador), 0)
+    r=np.rad2deg(r_rad) #grados
+    x=-r*sen_beta
+    y=r*cos_beta
+
+    plt.plot(x, y, color='lightcoral', zorder=2)   
+#--------------------------------------------------------
+#queremos calcular los triangulos esfericos que forman las coordenadas del archivo con (alfa0, delta0)
+A=df['ra_2000 (grados)']-alfa0
+b=90-delta0
+c=90-df['dec_2000 (grados)']
+
+#calculamos ahora la distancia r y el angulo beta r se calcula directamente con el teorema del coseno
+cos_r=np.cos(np.deg2rad(b))*np.cos(np.deg2rad(c))+np.sin(np.deg2rad(b))*np.sin(np.deg2rad(c))*np.cos(np.deg2rad(A))
+r_rad=np.arccos(cos_r) #radianes
+r=np.rad2deg(r_rad) #grados
+denominador=np.sin(r_rad)
+#por si acaso, para que no de error aqui tampoco:
+sen_beta=np.where(denominador > epsilon, (np.sin(np.deg2rad(c)) *np.sin(np.deg2rad(A))) / denominador, 0)
+cos_beta=np.where(denominador > epsilon, (np.cos(np.deg2rad(c)) -np.cos(r_rad) * np.cos(np.deg2rad(b))) / (np.sin(np.deg2rad(b))*denominador), 0)
+
+#para plotear usamos x,y
+x=-r*sen_beta
+y=r*cos_beta
+#---------------------------------------------------------
+#vamos a pillar un punto de referencia en una esquina para saber en que zona del cielo estamos, por ejemplo la esquina inferior izquierda
+A_ref=valores_alfa[-1]-alfa0 #ultimo valor de este vector
+c_ref=90-valores_delta[0] #primer valor de este vector
+x_ref=sa.x_triangulo_esferico(A_ref, c_ref, b)
+y_ref=sa.y_triangulo_esferico(A_ref, c_ref, b)
+
+
+#para la esquina superior derecha:
+A_ref2=valores_alfa[0]-alfa0 #primer valor de este vector
+c_ref2=90-valores_delta[-1] #ultimo valor de este vector
+x_ref2=sa.x_triangulo_esferico(A_ref2, c_ref2, b)
+y_ref2=sa.y_triangulo_esferico(A_ref2, c_ref2, b)
+#----------------------------------------------------------
+#REPRESENTACION GRAFICA
+m_min=df['Vmag'].min() #valor de la magnitud de la estrella mas
+#brillante de la lista
+k=1.358 #k=exp(valor medio de b), siendo b los valores obtenidos
+#tras realizar el ajuste exponencial del radio frente a la magnitud visual calculamos el valor de la constante a para este mapa:
+a=R*k**(m_min)
+#ya podemos calcular el radio para el resto de estrellas:
+radio_estrella=R*k**(m_min-df['Vmag'])
+
+#el 'size' de matplotlib es el area de los puntos, asi que podemos calcularlo a partir del radio:
+size=np.pi*radio_estrella**2
+
+#ploteo de los puntos:
+plt.scatter(x, y, marker='.', s=size, color='white', zorder=3)
+
+#ploteo de los dos puntos de referencia:
+plt.scatter(x_ref, y_ref, marker='*', s=200, color='lightskyblue', zorder=4)
+plt.scatter(x_ref2, y_ref2, marker='*', s=200, color='lightskyblue', zorder=4)
+
+#ponemos texto junto a los puntos de referencia con la info de las coordenadas de esos puntos:
+texto = f"alpha={math.trunc(sa.grados2HorasMinSeg(valores_alfa[-1])[0])}h{math.trunc(sa.grados2HorasMinSeg(valores_alfa[-1])[1])}min{math.trunc(sa.grados2HorasMinSeg(valores_alfa[-1])[2])}s, delta={math.trunc(sa.grados2GradosMinSeg(valores_delta[0])[0])}grados{math.trunc(sa.grados2GradosMinSeg(valores_delta[0])[1])}'{math.trunc(sa.grados2GradosMinSeg(valores_delta[0])[2])}\""
+texto2 = f"alpha={math.trunc(sa.grados2HorasMinSeg(valores_alfa[0])[0])}h{math.trunc(sa.grados2HorasMinSeg(valores_alfa[0])[1])}min{math.trunc(sa.grados2HorasMinSeg(valores_alfa[0])[2])}s, delta={math.trunc(sa.grados2GradosMinSeg(valores_delta[-1])[0])}grados{math.trunc(sa.grados2GradosMinSeg(valores_delta[-1])[1])}'{math.trunc(sa.grados2GradosMinSeg(valores_delta[-1])[2])}\""
+plt.annotate(texto,(x_ref, y_ref),xytext=(0, -15),textcoords='offset points',ha='center',color='lightskyblue') 
+#ubicacion del texto
+plt.annotate(texto2,(x_ref2, y_ref2),xytext=(0, 10),textcoords='offset points',ha='center',color='lightskyblue')
+
+plt.margins(x=0.10, y=0.12)
+
+#una leyenda personalizada con la distancia entre paralelos y meridianos:
+unidad_paralelos = "'" if tipo =='enano' else "grados"
+texto3 = (f"Paralelos: {paralelos}{unidad_paralelos}\n"f"Meridianos: {meridianos} min")
+
+plt.text(0.99, 0.15,texto3,transform=plt.gca().transAxes,va='top',ha='right',fontsize=10,bbox=dict(facecolor='lightskyblue', alpha=0.5, edgecolor='none'))
+plt.show()
