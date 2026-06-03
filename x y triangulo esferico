@@ -1,22 +1,15 @@
 def x_triangulo_esferico(A, c, b):
-    cos_r=np.cos(np.deg2rad(b))*np.cos(np.deg2rad(c))
-    +np.sin(np.deg2rad(b))*np.sin(np.deg2rad(c))
-    *np.cos(np.deg2rad(A))
+    cos_r=np.cos(np.deg2rad(b))*np.cos(np.deg2rad(c))+np.sin(np.deg2rad(b))*np.sin(np.deg2rad(c))*np.cos(np.deg2rad(A))
     r_rad=np.arccos(cos_r) #radianes
     r=np.rad2deg(r_rad) #grados
-    sen_beta=np.sin(np.deg2rad(c))*np.sin(np.deg2rad(A))
-    /np.sin(r_rad)
+    sen_beta=np.sin(np.deg2rad(c))*np.sin(np.deg2rad(A))/np.sin(r_rad)
     x=-r*sen_beta
     return(x)
 
 def y_triangulo_esferico(A, c, b):   
-    cos_r=np.cos(np.deg2rad(b))*np.cos(np.deg2rad(c))+
-    np.sin(np.deg2rad(b))*np.sin(np.deg2rad(c))
-    *np.cos(np.deg2rad(A))
+    cos_r=np.cos(np.deg2rad(b))*np.cos(np.deg2rad(c))+np.sin(np.deg2rad(b))*np.sin(np.deg2rad(c))*np.cos(np.deg2rad(A))
     r_rad=np.arccos(cos_r) #radianes
     r=np.rad2deg(r_rad) #grados
-    cos_beta=(np.cos(np.deg2rad(c))-np.cos(r_rad)
-    *np.cos(np.deg2rad(b)))/(np.sin(np.deg2rad(b))
-    *np.sin(r_rad))
+    cos_beta=(np.cos(np.deg2rad(c))-np.cos(r_rad)*np.cos(np.deg2rad(b)))/(np.sin(np.deg2rad(b))*np.sin(r_rad))
     y=r*cos_beta
     return(y)
