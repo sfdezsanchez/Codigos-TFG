@@ -1,0 +1,4 @@
+def HorasMinSeg2grados(horas, minutos, segundos):
+    tiempo=horas+minutos/60+segundos/3600
+    grados=tiempo*15 %360 
+    return(grados)
