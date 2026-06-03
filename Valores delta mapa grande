@@ -1,0 +1,13 @@
+def paralelos_grados(delta_min_gms, delta_max_gms, paralelos):
+    #VALORES DE DELTA:
+    #para ver el valor minimo:
+    delta_g_min=delta_min_gms[0] #componente del vector que representa los grados
+    delta_lineas_min=sa.GradosMinSeg2grados(math.trunc(delta_g_min-1), 0, 0) #unidades:grados
+
+    #hacemos lo mismo para el valor maximo:
+    delta_g_max=delta_max_gms[0]
+    delta_lineas_max=sa.GradosMinSeg2grados(math.trunc(delta_g_max+1), 0, 0)
+
+    espaciado=paralelos #grados
+    valores_delta=np.arange(delta_lineas_min, delta_lineas_max+espaciado, espaciado) #este es el vector con las coordenadas de delta de los puntos de corte con los alfas
+    return(valores_delta)
