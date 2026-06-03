@@ -1,0 +1,8 @@
+def grados2GradosMinSeg(delta0):
+    delta0_grados=math.trunc(delta0)
+    delta0_minutos_decimales=(delta0-delta0_grados)*60
+    delta0_minutos=math.trunc(delta0_minutos_decimales)
+    delta0_segundos=(delta0_minutos_decimales-delta0_minutos)*60
+    delta0_g=np.array([delta0_grados, delta0_minutos, 
+    delta0_segundos])
+    return(delta0_g)
