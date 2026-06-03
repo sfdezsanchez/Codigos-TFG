@@ -1,0 +1,10 @@
+def separacion_angular(delta1, delta2, alfa1, alfa2): 
+#unidades: grados
+    cos_d=np.sin(np.radians(delta1))*np.sin(np.radians(delta2))+np.cos(np.radians(delta1))*np.cos(np.radians(delta2))*np.cos(np.radians(alfa1-alfa2))
+    d=np.rad2deg(np.arccos(cos_d))
+    for i in range(len(d)):
+        if d.iloc[i] < (10/60): #si la separacion es menor
+        #que 10'
+            delta=(delta1.iloc[i] + delta2)/2
+            d.iloc[i]=np.sqrt(((alfa1.iloc[i] - alfa2)*np.cos(np.radians(delta)))**2 +(delta1.iloc[i] -delta2)**2)
+    return d
