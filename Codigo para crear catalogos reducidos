@@ -1,0 +1,97 @@
+import pandas as pd
+import numpy as np
+import separacion_ang as sa
+#---------------------DATOS DE ENTRADA---------------------
+#por ejemplo, para Casiopea:
+alfa0_h=1 #horas
+alfa0_m=0 #minutos
+alfa0_s=0 #segundos
+
+delta0_g=60 #grados
+delta0_m=0 #minutos
+delta0_s=0 #segundos
+
+radio=10 #grados
+#--------------------------------------------------------------
+#pasamos a grados:
+alfa0=sa.HorasMinSeg2grados(alfa0_h, alfa0_m, alfa0_s)
+delta0=sa.GradosMinSeg2grados(delta0_g,delta0_m,delta0_s)
+
+#hallamos los puntos 90 grados al norte y sur de (alfa0,delta0)
+delta_N=delta0+90
+alfa_N=alfa0
+
+if delta_N > 90:
+    delta_N=180-delta_N
+    alfa_N=alfa0+180
+else:
+    delta_N=delta_N
+    alfa_N=alfa_N
+
+delta_S=delta0-90
+alfa_S=alfa0
+
+if delta_S < (-90):
+    delta_S=-(180-np.abs(delta_S))
+    alfa_S=alfa0+180
+else:
+    delta_S=delta_S
+    alfa_S=alfa_S
+
+#coordenadas cartesianas de 0 y N:
+x0=np.cos(np.radians(delta0))*np.cos(np.radians(alfa0))
+y0=np.cos(np.radians(delta0))*np.sin(np.radians(alfa0))
+z0=np.sin(np.radians(delta0))
+
+xN=np.cos(np.radians(delta_N))*np.cos(np.radians(alfa_N))
+yN=np.cos(np.radians(delta_N))*np.sin(np.radians(alfa_N))
+zN=np.sin(np.radians(delta_N))
+
+#estas coordenadas forman 3 vectores:
+vec0=np.array([x0,y0,z0])
+vecN=np.array([xN,yN,zN])
+
+#E=Nx0, W=0xN
+vecE=np.cross(vecN, vec0)
+vecW=np.cross(vec0, vecN)
+
+#de E y W tenemos que sacar x,y,z:
+xE=vecE[0]
+yE=vecE[1]
+zE=vecE[2]
+
+xW=vecW[0]
+yW=vecW[1]
+zW=vecW[2]
+
+#calculamos delta_E, alfa_E y delta_W, alfa_W:
+delta_E=np.rad2deg(np.arcsin(zE))
+alfa_E = np.rad2deg(np.arctan2(yE, xE)) % 360
+
+delta_W=np.rad2deg(np.arcsin(zW))
+alfa_W = np.rad2deg(np.arctan2(yW, xW)) % 360
+#--------------------------------------------------------------
+first_chunk=True
+
+for df in pd.read_csv('catalogo_completo.csv', low_memory=False, chunksize=200000):
+
+    #calculamos las distancias de las estrellas a estos puntos
+    df['a0']=sa.separacion_angular_chunks(df['dec_2000 (grados)'], delta0, df['ra_2000 (grados)'], alfa0)
+    df['aN']=sa.separacion_angular_chunks(df['dec_2000 (grados)'], delta_N, df['ra_2000 (grados)'], alfa_N)
+    df['aS']=sa.separacion_angular_chunks(df['dec_2000 (grados)'], delta_S, df['ra_2000 (grados)'], alfa_S)
+    df['aE']=sa.separacion_angular_chunks(df['dec_2000 (grados)'], delta_E, df['ra_2000 (grados)'], alfa_E)
+    df['aW']=sa.separacion_angular_chunks(df['dec_2000 (grados)'], delta_W, df['ra_2000 (grados)'], alfa_W)
+
+    #aplicamos las condiciones:
+    df2=df[(df['a0'])<90]
+    df2=df2[(df2['aN'])>(90-radio)]
+    df2=df2[(df2['aS'])>(90-radio)]
+    df2=df2[(df2['aE'])>(90-radio)]
+    df2=df2[(df2['aW'])>(90-radio)]
+
+    #opcional si se quiere acotar el brillo:
+    df2=df2[(df2['Vmag'])<10.1]
+
+    df2.to_csv('catalogo_reducido_casiopea.csv', mode='w' if first_chunk else 'a',header=first_chunk, index=False)
+
+    first_chunk = False
